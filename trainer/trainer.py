@@ -20,7 +20,7 @@ class Trainer(BaseTrainer):
         self.data_loader = data_loader
         self.valid_data_loader = valid_data_loader
         self.do_validation = self.valid_data_loader is not None
-        self.log_step = int(np.sqrt(self.batch_size))
+        self.log_step = 10*int(np.sqrt(self.batch_size))
 
     def _eval_metrics(self, output, target):
         acc_metrics = np.zeros(len(self.metrics))
@@ -64,12 +64,17 @@ class Trainer(BaseTrainer):
             total_metrics += self._eval_metrics(output, target)
 
             if self.verbosity >= 2 and batch_idx % self.log_step == 0:
-                self.logger.info('Train Epoch: {} [{}/{} ({:.0f}%)] Loss: {:.6f}'.format(
+                msg = 'Train Epoch: {} [{}/{} ({:.0f}%)] Loss: {:.6f}'.format(
                     epoch,
                     batch_idx * self.data_loader.batch_size,
-                    len(self.data_loader.sampler),
+                    len(self.data_loader) * self.data_loader.batch_size,
                     100.0 * batch_idx / len(self.data_loader),
-                    loss.item()))
+                    loss.item())
+
+                # TODO: Figure out how to make flushed text show up in PyCharm console:
+                print(msg, end='\r', flush=True)
+                # self.logger.info(msg)
+
                 self.writer.add_image('input', make_grid(data.cpu(), nrow=8, normalize=True))
 
         log = {
