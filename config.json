@@ -17,7 +17,7 @@
         }
     },
     "data_loader": {
-        "type": "MnistDataLoader",
+        "type": "PyTorch",
         "shuffle_data": true,
          "train": {
             "kwargs": {
@@ -31,22 +31,26 @@
             }
         }
     },
-
-    "lr_scheduler_type": "ExponentialLR",
-    "lr_scheduler_freq": 1,
-    "lr_scheduler": {
-            "gamma": 0.8685113737513527
-    },
- 
-    "optimizer_type": "Adam",
     "optimizer": {
-        "lr": 0.001,
-        "weight_decay": 0
+        "type": "Adam",
+        "kwargs": {
+            "lr": 0.001,
+            "weight_decay": 0
+        },
+        "lr_scheduler": {
+            "type": "ExponentialLR",
+            "step_freq": 1,
+            "kwargs":
+            {
+                "gamma": 0.8685113737513527
+            }
+        }
     },
     "loss": "NLLLoss",
     "loss_args": {
         "reduction": "elementwise_mean"
     },
+
     "metrics": ["my_metric", "my_metric2"],
     "trainer": {
         "epochs": 1000,
