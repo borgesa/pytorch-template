@@ -23,8 +23,7 @@ def main(config, resume):
                                                 dataset,
                                                 config_full=config)
 
-    model = get_model_instance(model_arch=config['arch'],
-                               model_params=config['model'])
+    model = get_model_instance(model_config=config['model'])
     model.summary()
 
     loss = get_loss_function(config['loss'])
