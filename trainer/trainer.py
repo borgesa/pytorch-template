@@ -19,7 +19,7 @@ class Trainer(BaseTrainer):
         self.batch_size = data_loader.batch_size
         self.data_loader = data_loader
         self.valid_data_loader = valid_data_loader
-        self.do_validation = self.valid_data_loader is not None
+        self.do_validation = self.valid_data_loader
         self.log_step = 10*int(np.sqrt(self.batch_size))
 
     def _eval_metrics(self, output, target):
