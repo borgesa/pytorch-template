@@ -4,6 +4,9 @@ import json
 import logging
 import torch
 import torch.optim as optim
+# Local imports
+from model.model_utils import get_optimizer
+
 from utils.util import ensure_dir
 from logger.visualization import WriterTensorboardX
 
@@ -32,17 +35,16 @@ class BaseTrainer:
         self.train_logger = train_logger
         self.writer = WriterTensorboardX(config)
 
-        self.optimizer = getattr(optim, config['optimizer_type'])(filter(lambda p: p.requires_grad, model.parameters()),
-                                                                  **config['optimizer'])
-        self.lr_scheduler = getattr(
-            optim.lr_scheduler,
-            config['lr_scheduler_type'], None)
+        # Optimizer and learning rate scheduler:
+        self.optimizer, self.lr_scheduler = get_optimizer(model, config['optimizer'])
         if self.lr_scheduler:
-            self.lr_scheduler = self.lr_scheduler(self.optimizer, **config['lr_scheduler'])
-            self.lr_scheduler_freq = config['lr_scheduler_freq']
+            self.lr_scheduler_freq = config['optimizer']['lr_scheduler']['step_freq']
+
+        # Training parameter to monitor, and whether max or min is target:
         self.monitor = config['trainer']['monitor']
         self.monitor_mode = config['trainer']['monitor_mode']
-        assert self.monitor_mode == 'min' or self.monitor_mode == 'max'
+        assert self.monitor_mode in ['min', 'max'], "Invalid value for 'monitor_mode'"
+
         self.monitor_best = math.inf if self.monitor_mode == 'min' else -math.inf
         self.start_epoch = 1
         self.checkpoint_dir = os.path.join(config['trainer']['save_dir'], self.name)

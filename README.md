@@ -75,7 +75,8 @@ If TensorboardX is used:
   │   ├── modules/ - submodules of your model
   │   ├── loss.py
   │   ├── metric.py
-  │   └── model.py
+  │   ├── model.py
+  │   └── model_utils.py
   │
   ├── saved/ - default checkpoints folder
   │   └── runs/ - default logdir for tensorboardX
@@ -129,11 +130,22 @@ Config files are in `.json` format:
             }
         }
     },
-    "optimizer_type": "Adam",
     "optimizer": {
-        "lr": 0.001,              // (optional) learning rate
-        "weight_decay": 0         // (optional) weight decay
+        "type": "Adam",           // Optimizer type (PyTorch built-ins)
+        "kwargs": {               // Arguments passed as **kwargs to optimizer 
+            "lr": 0.001,
+            "weight_decay": 0
+        },
+        "lr_scheduler": {
+            "type": "ExponentialLR", // Learning rate scheduler type (PyTorch built-ins)
+                "step_freq": 1,   // Frequency to apply schedluer (NB: set equal one for e.g. 'plateau' types)
+            "kwargs":             // Arguments passed as **kwargs to lr scheduler 
+            {
+                "gamma": 0.8685113737513527
+            }
+        }
     },
+
     "loss": "my_loss",            // loss
     "metrics": [                  // metrics
       "my_metric",
