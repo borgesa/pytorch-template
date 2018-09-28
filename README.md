@@ -149,6 +149,7 @@ Config files are in `.json` format:
     "loss_args": {
         "reduction": "elementwise_mean"
     },                            // elements in "loss_args" will be passed as kwargs to loss object
+
     "metrics": [                  // metrics
       "my_metric",
       "my_metric2"
