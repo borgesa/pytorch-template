@@ -9,7 +9,7 @@ from model.metric import get_metric_functions
 from data_utils.data_loaders import get_data_loaders
 from data_utils.datasets import get_dataset
 from trainer import Trainer
-from logger import Logger
+from utils.logger import Logger
 
 logging.basicConfig(level=logging.INFO, format='')
 
