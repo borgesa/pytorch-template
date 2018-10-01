@@ -1,14 +1,15 @@
+import datetime
+import json
 import os
 import math
-import json
 import logging
+# Third party imports:
 import torch
-import torch.optim as optim
 # Local imports
 from model.model_utils import get_optimizer
 
 from utils.util import ensure_dir
-from logger.visualization import WriterTensorboardX
+from utils.visualization import WriterTensorboardX
 
 
 class BaseTrainer:
@@ -18,6 +19,7 @@ class BaseTrainer:
     def __init__(self, model, loss, metrics, resume, config, train_logger=None):
         self.config = config
         self.logger = logging.getLogger(self.__class__.__name__)
+
         self.model = model
         self.loss = loss
         self.metrics = metrics
@@ -25,6 +27,8 @@ class BaseTrainer:
         self.epochs = config['trainer']['epochs']
         self.save_freq = config['trainer']['save_freq']
         self.verbosity = config['trainer']['verbosity']
+
+        # CUDA settings:
         self.with_cuda = config['cuda'] and torch.cuda.is_available()
         if config['cuda'] and not torch.cuda.is_available():
             self.logger.warning('Warning: There\'s no CUDA support on this machine, '
@@ -32,6 +36,7 @@ class BaseTrainer:
         self.device = torch.device('cuda:' + str(config['gpu']) if self.with_cuda else 'cpu')
         self.model = self.model.to(self.device)
 
+        # Logging and writers:
         self.train_logger = train_logger
         self.writer = WriterTensorboardX(config)
 
@@ -63,32 +68,39 @@ class BaseTrainer:
         Full training logic
         """
         for epoch in range(self.start_epoch, self.epochs + 1):
-            result = self._train_epoch(epoch)
-            log = {'epoch': epoch}
-            for key, value in result.items():
-                if key == 'metrics':
-                    for i, metric in enumerate(self.metrics):
-                        log[metric.__name__] = result['metrics'][i]
-                elif key == 'val_metrics':
-                    for i, metric in enumerate(self.metrics):
-                        log['val_' + metric.__name__] = result['val_metrics'][i]
-                else:
-                    log[key] = value
-            if self.train_logger is not None:
+            # Train one epoch:
+            log = self._train_epoch(epoch)
+
+            # Add epoch to logger:
+            if self.train_logger:
                 self.train_logger.add_entry(log)
                 if self.verbosity >= 1:
                     for key, value in log.items():
                         self.logger.info('    {:15s}: {}'.format(str(key), value))
-            if (self.monitor_mode == 'min' and log[self.monitor] < self.monitor_best)\
-                    or (self.monitor_mode == 'max' and log[self.monitor] > self.monitor_best):
+
+            # If current epoch model is 'new best', override/store it as best epoch:
+            if self._new_best_model(log):
                 self.monitor_best = log[self.monitor]
                 self._save_checkpoint(epoch, log, save_best=True)
+
+            # Save model of current epoch (in alignment with config['trainer']['save_freq']):
             if epoch % self.save_freq == 0:
                 self._save_checkpoint(epoch, log)
+
+            # Check if learning rate should be updated:
             if self.lr_scheduler and epoch % self.lr_scheduler_freq == 0:
                 self.lr_scheduler.step(epoch)
                 lr = self.lr_scheduler.get_lr()[0]
                 self.logger.info('New Learning Rate: {:.6f}'.format(lr))
+
+    def _new_best_model(self, log):
+        """Returns 'True' if current epoch is best until this point in training, 'False' otherwise."""
+        criteria_a =  (self.monitor_mode == 'min' and log[self.monitor] < self.monitor_best)
+        criteria_b =  (self.monitor_mode == 'max' and log[self.monitor] > self.monitor_best)
+
+        new_best_check = criteria_a or criteria_b
+
+        return new_best_check
 
     def _train_epoch(self, epoch):
         """

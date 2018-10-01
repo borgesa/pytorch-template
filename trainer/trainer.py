@@ -15,12 +15,11 @@ class Trainer(BaseTrainer):
     def __init__(self, model, loss, metrics, resume, config,
                  data_loader, valid_data_loader=None, train_logger=None):
         super(Trainer, self).__init__(model, loss, metrics, resume, config, train_logger)
-        self.config = config
         self.batch_size = data_loader.batch_size
         self.data_loader = data_loader
         self.valid_data_loader = valid_data_loader
         self.do_validation = self.valid_data_loader
-        self.log_step = 10*int(np.sqrt(self.batch_size))
+        self.log_step = int(np.sqrt(self.batch_size))
 
     def _eval_metrics(self, output, target):
         acc_metrics = np.zeros(len(self.metrics))
@@ -75,22 +74,23 @@ class Trainer(BaseTrainer):
                 print(msg, end='\r', flush=True)
                 # self.logger.info(msg)
 
-                self.writer.add_image('input', make_grid(data.cpu(), nrow=8, normalize=True))
+                # self.writer.add_image('input', make_grid(data.cpu(), nrow=8, normalize=True))
 
-        log = {
-            'loss': total_loss / len(self.data_loader),
-            'metrics': (total_metrics / len(self.data_loader)).tolist()
-        }
+        # Create log dictionary
+        log = {'loss': total_loss/len(self.data_loader)}
+         # Add metrics to log dictionary:
+        for i, metric in enumerate(self.metrics):
+            log[metric.__name__] = total_metrics[i]/len(self.data_loader)
 
+        # Carry out validation epoch:
         if self.do_validation:
             val_log = self._valid_epoch(epoch)
-            log = {**log, **val_log}
+            log.update(val_log)
 
         return log
 
     def _valid_epoch(self, epoch):
-        """
-        Validate after training an epoch
+        """Validate after training an epoch
 
         :return: A log that contains information about validation
 
@@ -107,13 +107,16 @@ class Trainer(BaseTrainer):
                 output = self.model(data)
                 loss = self.loss(output, target)
 
-                self.writer.set_step((epoch - 1) * len(self.data_loader) + batch_idx, 'valid')
+                self.writer.set_step((epoch - 1) * len(self.valid_data_loader) + batch_idx, 'valid')
                 self.writer.add_scalar('loss', loss.item())
                 total_val_loss += loss.item()
                 total_val_metrics += self._eval_metrics(output, target)
                 self.writer.add_image('input', make_grid(data.cpu(), nrow=8, normalize=True))
 
-        return {
-            'val_loss': total_val_loss / len(self.valid_data_loader),
-            'val_metrics': (total_val_metrics / len(self.valid_data_loader)).tolist()
-        }
+        # Create log dictionary
+        val_log = {'val_loss': total_val_loss / len(self.valid_data_loader)}
+        # Add metrics to log dictionary:
+        for i, metric in enumerate(self.metrics):
+            val_log['val_' + metric.__name__] = total_val_metrics[i]/len(self.data_loader)
+
+        return val_log
